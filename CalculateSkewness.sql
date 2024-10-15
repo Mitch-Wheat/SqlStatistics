@@ -19,16 +19,17 @@ GO
 --     exec dbo.CalculateSkewness 'dbo', 'MyTable', 'MyColumn', 50, 0
 --
 -- Might take a while on a large database.
--- Run at own risk
 --
 -- Adapted from:
 -- https://gitlab.com/swasheck/statistics-scripts/blob/master/table%20analysis.sql
 --
+-- Refs:
+-- https://swasheck.wordpress.com/2016/04/06/skewed-data-finding-the-columns/
 -- https://brownmath.com/stat/shape.htm
 -- https://learnsql.com/blog/high-performance-statistical-queries-skewness-kurtosis/
--- https://swasheck.wordpress.com/2016/04/06/skewed-data-finding-the-columns/
--- 
-CREATE OR ALTER PROCEDURE dbo.CalculateSkewness
+--
+--
+CREATE OR ALTER PROCEDURE dbo.CalculateSkew
 (
     @pSchemaName sysname = NULL,
     @pTableName sysname = NULL,
@@ -132,10 +133,10 @@ begin
         and t.name = @TableName;
 
 	/*
-		Sample rate:
-			if the parameter is -1, use the average of the sample rate of all stats on the table
-			if the parameter is 0, use the max sample rate of all stats on the table
-			otherwise use the sample rate that was supplied
+		SamplePercent:
+			if the parameter is -1, use the average of the sample ratio of all stats on the table
+			if the parameter is 0, use the max sample ratio of all stats on the table
+			otherwise use the sample percent that was supplied
 	*/
 	select
 		@SamplePercent = 
@@ -175,9 +176,9 @@ begin
 		exec sp_executesql @sql;
 
 	/*
-		calculate skewness stats: 
-			b1 -> population skewness calculation
-			G1 -> sample skewness calculation (corrects for sample bias)
+	    Calculate skewness stats: 
+			b1 -> population skewness
+			G1 -> sample skewness (corrects for sample bias)
 			ses -> standard error of skew. This is a standard deviation calculation on the G1
 			Zg1 -> test statistic which provides more meaning to the skewness calculation
 	*/
@@ -272,11 +273,10 @@ deallocate colcur;
 
 drop table if exists #tmp_tally_table;
 
--- The critical value of Zg1 is approximately 2. (This is a two-tailed test of skewness ≠ 0 at roughly the 0.05 significance level)
---
--- If Zg1 < −2, the population is very likely skewed negatively (though you don’t know by how much).
--- If Zg1 is between −2 and +2, you can’t reach any conclusion about the skewness of the population: it might be symmetric, or it might be skewed in either direction.
--- If Zg1 > 2, the population is very likely skewed positively (though you don’t know by how much).
+-- The critical value of Zg1 is approximately 2 (This is a two-tailed test of skewness ≠ 0 at roughly the 0.05 significance level)
+--   If Zg1 < −2, the population is very likely skewed negatively (though you don’t know by how much).
+--   If Zg1 is between −2 and +2, you can’t reach any conclusion about the skewness of the population: it might be symmetric, or it might be skewed in either direction.
+--   If Zg1 > 2, the population is very likely skewed positively (though you don’t know by how much).
 
 select 
     *
@@ -284,7 +284,7 @@ from
     #table_analysis
 where 
     abs(Zg1) > 2
-	and distinct_ratio <= 50
+	and distinct_ratio <= 40
 order by 
     abs(Zg1) desc;
 

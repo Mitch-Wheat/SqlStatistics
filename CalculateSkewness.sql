@@ -97,14 +97,15 @@ FROM
 WHERE
     sc.name != 'cdc' 
     AND sc.name != 'history'
-    and t.name not like '#%' and t.name != 'awsdms_truncation_safeguard'
-    and c.is_identity = 0
-    and c.is_computed = 0
-    and c.is_filestream = 0
-    and c.is_xml_document = 0
-    and t.is_memory_optimized = 0
-    and ty.max_length != -1    -- skip (n)varchar(max) columns
-    and ty.max_length < 200    -- skip long text columns
+    AND t.name not like '#%' and t.name != 'awsdms_truncation_safeguard'
+    AND c.is_identity = 0
+    AND c.is_computed = 0
+    AND c.is_filestream = 0
+    AND c.is_xml_document = 0
+    AND t.is_memory_optimized = 0
+    AND ty.max_length != -1    -- skip (n)varchar(max) columns
+    AND ty.max_length < 200    -- skip long text columns
+    AND ty.user_type_id NOT IN (34, 35, 99)
 	AND OBJECTPROPERTY(t.object_id, 'IsTable') = 1 
     AND (@pSchemaName IS NULL OR sc.name = @pSchemaName)
     AND (@pTableName IS NULL OR t.name = @pTableName)
